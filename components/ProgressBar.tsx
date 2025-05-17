@@ -6,9 +6,9 @@ interface ProgressBarProps {
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
   return (
-    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 overflow-hidden">
+    <div className="w-full bg-white rounded-full h-4 overflow-hidden border border-gray-300">
       <div 
-        className="h-full bg-primary transition-all duration-500 ease-out"
+        className="h-full bg-[#3B82F6] transition-all duration-500 ease-out"
         style={{ width: `${progress}%` }}
       ></div>
     </div>

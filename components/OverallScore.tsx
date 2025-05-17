@@ -25,27 +25,29 @@ const OverallScore: React.FC<OverallScoreProps> = ({ score }) => {
   };
 
   return (
-    <div className="text-center">
-      <h2 className="text-2xl font-bold mb-6">Overall Compliance Score</h2>
-      
-      <div className="relative w-48 h-48 mx-auto mb-8">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`w-40 h-40 rounded-full ${getColor(score)} opacity-20`}></div>
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`w-32 h-32 rounded-full ${getColor(score)} opacity-40`}></div>
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-4xl font-bold" style={{ color: getColor(score).replace('bg-', '') }}>
-            {score}%
+    <div className="relative w-full max-w-xl mx-auto mb-8">
+      {/* Carte bleue extérieure */}
+     
+        {/* Carte blanche intérieure */}
+        <div className="bg-white  rounded-lg shadow-lg p-8 px-6 py-6 w-full max-w-xs mx-auto  mt-8 mb-8">
+          <h2 className="text-2xl font-bold mb-6 text-center">Overall Compliance Score</h2>
+          <div className="relative w-40 h-40 mx-auto mb-6">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-36 h-36 rounded-full ${getColor(score)} opacity-20`}></div>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-28 h-28 rounded-full ${getColor(score)} opacity-40`}></div>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-4xl font-bold" style={{ color: getColor(score).replace('bg-', '') }}>
+                {score}%
+              </div>
+            </div>
           </div>
+          <p className={`text-lg font-medium text-center ${getTextColor(score)}`}>{getMessage(score)}</p>
         </div>
       </div>
-
-      <p className={`text-lg font-medium ${getTextColor(score)}`}>
-        {getMessage(score)}
-      </p>
-    </div>
+    
   );
 };
 

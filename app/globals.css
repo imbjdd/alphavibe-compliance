@@ -23,8 +23,6 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  overflow: hidden;
-  height: 100vh;
 }
 
 /* Animation pour le drapeau européen */
@@ -39,4 +37,12 @@ body {
 .animate-eu-flag {
   animation: eu-flag-swing 2.5s ease-in-out infinite;
   display: inline-block;
+}
+
+.animate-spin-slow {
+  animation: spin 8s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
