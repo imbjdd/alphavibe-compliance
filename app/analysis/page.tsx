@@ -112,11 +112,19 @@ export default function AnalysisPage() {
 
   return (
     <div className="max-w-4xl mx-auto pb-16 px-2 sm:px-4 md:px-8">
-      <h1 className="text-3xl font-bold mb-2 text-center">Website Compliance Analysis</h1>
       {url && (
-        <p className="text-lg mb-8 text-center">
-          Analyzing: <span className="font-medium">{url}</span>
-        </p>
+        <>
+          <div className="flex justify-center mb-6">
+            <span className="relative inline-block w-full max-w-xs">
+              {/* Ombre/décalage */}
+              <span className="absolute inset-0 w-full h-full bg-gray-900 rounded-xl translate-y-2 translate-x-2 z-0"></span>
+              <span className="relative z-10 block px-4 py-2 bg-[#3B82F6] text-white font-medium rounded-xl border-[3px] border-gray-900 shadow-lg text-base md:text-lg truncate w-full">
+                {url}
+              </span>
+            </span>
+          </div>
+          <h1 className="text-3xl font-extrabold mb-8 text-center">Website Compliance Analysis</h1>
+        </>
       )}
 
       {isLoading ? (
