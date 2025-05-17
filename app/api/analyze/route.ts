@@ -33,15 +33,15 @@ interface OpenAIResponse {
 }
 
 // Function to call OpenAI API with retry logic
-async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-4-turbo', maxTokens = 1000, retries = 3): Promise<OpenAIResponse> {
+async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-3.5-turbo', maxTokens = 1000, retries = 2): Promise<OpenAIResponse> {
   let retryCount = 0;
   let lastError: any;
   
   while (retryCount <= retries) {
     try {
       if (retryCount > 0) {
-        // If this is a retry, wait with exponential backoff
-        const backoffTime = Math.pow(2, retryCount) * 1000;
+        // Shorter backoff time to improve performance
+        const backoffTime = Math.min(Math.pow(2, retryCount) * 1000, 4000);
         console.log(`Retrying in ${backoffTime/1000} seconds (attempt ${retryCount} of ${retries})...`);
         await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
@@ -52,13 +52,16 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
           model: model,
           messages,
           temperature: 0.1,
-          max_tokens: maxTokens
+          max_tokens: maxTokens,
+          presence_penalty: 0,
+          frequency_penalty: 0
         },
         {
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 30000 // 30 seconds timeout
         }
       );
       
@@ -186,128 +189,95 @@ export async function POST(request: Request) {
 
 // Analyze compliance using OpenAI
 async function analyzeContentWithOpenAI(text: string, documentType: string): Promise<{ score: number, issues: ComplianceIssue[] }> {
-  // Truncate text to fit within token limits
-  const truncatedText = text.length > 12000 ? text.substring(0, 12000) + '...[truncated]' : text;
+  // Truncate text more aggressively to reduce token usage and processing time
+  const truncatedText = text.length > 6000 ? text.substring(0, 6000) + '...[truncated]' : text;
   
   let prompt = '';
   let systemPrompt = '';
   
   if (documentType === 'Terms of Service') {
-    systemPrompt = `You are a legal expert specializing in Terms of Service compliance. Analyze the provided Terms of Service for legal compliance and best practices. Return your response as a JSON object without any markdown formatting.`;
+    systemPrompt = `Analyze the provided Terms of Service for legal compliance and return JSON only.`;
     
-    prompt = `Analyze this Terms of Service for compliance with best practices and legal requirements.
+    prompt = `Analyze the terms of service briefly for key compliance issues only.
 
-Important areas to check:
-1. Clear and understandable language
-2. Liability limitations
-3. Intellectual property rights
-4. Termination clauses
-5. Governing law and jurisdiction
-6. User obligations and restrictions
-7. Changes to terms notification
-8. Account termination policy
+Key areas: clear language, liability, IP rights, termination, governing law.
 
-Provide your response in the following structured JSON format only, without any markdown formatting or code blocks:
+Return JSON only:
 {
-  "score": [0-100 score representing overall compliance],
+  "score": [0-100 compliance score],
   "issues": [
     {
-      "ruleId": "unique-id-for-issue",
-      "ruleName": "Short name of the compliance rule",
+      "ruleId": "issue-id",
+      "ruleName": "Issue name",
       "severity": "high/medium/low",
-      "description": "Description of the issue found",
-      "recommendation": "Specific recommendation to fix the issue"
+      "description": "Brief issue description",
+      "recommendation": "Brief recommendation"
     }
   ]
 }
 
-Terms of Service:
+Terms:
 ${truncatedText}`;
   } else if (documentType === 'Privacy Policy') {
-    systemPrompt = `You are a legal expert specializing in privacy laws including GDPR, CCPA, and other privacy regulations. Analyze the provided Privacy Policy for compliance issues. Return your response as a JSON object without any markdown formatting.`;
+    systemPrompt = `Analyze the provided Privacy Policy for compliance issues and return JSON only.`;
     
-    prompt = `Analyze this Privacy Policy for compliance with GDPR, CCPA, and general privacy best practices.
+    prompt = `Analyze the privacy policy briefly for key compliance issues only.
 
-Important areas to check:
-1. Purpose of data collection
-2. Types of data collected
-3. Data subject rights (access, deletion, portability)
-4. Legal basis for processing
-5. Data retention policies
-6. Third-party sharing
-7. International transfers
-8. Security measures
-9. Cookie usage disclosure
-10. Changes to privacy policy notification
+Key areas: data purpose, data rights, legal basis, retention, sharing.
 
-Provide your response in the following structured JSON format only, without any markdown formatting or code blocks:
+Return JSON only:
 {
-  "score": [0-100 score representing overall compliance],
+  "score": [0-100 compliance score],
   "issues": [
     {
-      "ruleId": "unique-id-for-issue",
-      "ruleName": "Short name of the compliance rule",
+      "ruleId": "issue-id",
+      "ruleName": "Issue name",
       "severity": "high/medium/low",
-      "description": "Description of the issue found",
-      "recommendation": "Specific recommendation to fix the issue"
+      "description": "Brief issue description", 
+      "recommendation": "Brief recommendation"
     }
   ]
 }
 
-Privacy Policy:
+Policy:
 ${truncatedText}`;
   } else if (documentType === 'Cookie Policy') {
-    systemPrompt = `You are a legal expert specializing in cookie policies and ePrivacy regulations. Analyze the provided Cookie Policy for compliance issues. Return your response as a JSON object without any markdown formatting.`;
+    systemPrompt = `Analyze the provided Cookie Policy for compliance issues and return JSON only.`;
     
-    prompt = `Analyze this Cookie Policy for compliance with ePrivacy Directive, GDPR, and cookie best practices.
+    prompt = `Analyze the cookie policy briefly for key compliance issues only.
 
-Important areas to check:
-1. Classification of cookies (necessary, preferences, analytics, marketing)
-2. Purpose of each cookie type
-3. Duration of cookies
-4. Third-party cookies disclosure
-5. Opt-out mechanisms
-6. Consent requirements
-7. Clear explanations of tracking technologies
-8. Information about disabling cookies
+Key areas: cookie types, purposes, duration, third-parties, opt-out options.
 
-Provide your response in the following structured JSON format only, without any markdown formatting or code blocks:
+Return JSON only:
 {
-  "score": [0-100 score representing overall compliance],
+  "score": [0-100 compliance score],
   "issues": [
     {
-      "ruleId": "unique-id-for-issue",
-      "ruleName": "Short name of the compliance rule",
-      "severity": "high/medium/low", 
-      "description": "Description of the issue found",
-      "recommendation": "Specific recommendation to fix the issue"
+      "ruleId": "issue-id",
+      "ruleName": "Issue name",
+      "severity": "high/medium/low",
+      "description": "Brief issue description",
+      "recommendation": "Brief recommendation"
     }
   ]
 }
 
-Cookie Policy:
+Policy:
 ${truncatedText}`;
   }
   
   console.log(`Analyzing ${documentType} with OpenAI...`);
   
   try {
-    // Call OpenAI API with retry
+    // Call OpenAI API with retry - use faster model and settings
     const messages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: prompt }
     ];
     
-    // Use gpt-3.5-turbo for faster response and lower cost
-    const response = await callOpenAIWithRetry(messages, 'gpt-3.5-turbo', 2000);
+    // Always use gpt-3.5-turbo, limit tokens for faster response
+    const response = await callOpenAIWithRetry(messages, 'gpt-3.5-turbo', 1000);
     const content = response.choices[0].message.content;
-    
-    // Log response for debugging
-    console.log(`\n========== OPENAI ANALYSIS FOR ${documentType} ==========`);
-    console.log(`Model used: ${response.model}`);
-    console.log(`Tokens used: ${response.usage.total_tokens}`);
-    console.log(`Response: ${content}`);
-    console.log(`========== END OPENAI ANALYSIS ==========\n`);
     
     // Parse the response as JSON
     try {

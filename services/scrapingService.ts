@@ -3,12 +3,62 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import * as dotenv from 'dotenv';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import { homedir } from 'os';
 
 // Load environment variables
 dotenv.config();
 
 const execAsync = promisify(exec);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+// Flag to track whether we've verified Playwright is installed
+let isPlaywrightVerified = false;
+
+// Check if Playwright browsers are already installed
+const isPlaywrightInstalled = (): boolean => {
+  // Common paths for Playwright browser installations
+  const homeDir = homedir();
+  const possiblePaths = [
+    join(homeDir, '.cache', 'ms-playwright'),
+    join(homeDir, 'Library', 'Caches', 'ms-playwright'),
+    join(process.cwd(), 'node_modules', 'playwright-core', '.local-browsers')
+  ];
+  
+  for (const path of possiblePaths) {
+    if (existsSync(path)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// Launch browser with improved error handling and installation check
+const launchBrowser = async () => {
+  try {
+    // Only check installation once per session
+    if (!isPlaywrightVerified) {
+      if (!isPlaywrightInstalled()) {
+        console.log('Playwright browsers not found, installing... (one-time setup)');
+        await execAsync('npx playwright install chromium --with-deps');
+        console.log('Playwright installed successfully');
+      } else {
+        console.log('Playwright browsers already installed');
+      }
+      isPlaywrightVerified = true;
+    }
+    
+    // Use executable path to avoid reinstallation attempts and improve startup time
+    return await chromium.launch({ 
+      headless: true,
+      timeout: 30000,
+      args: ['--disable-gpu', '--disable-dev-shm-usage', '--disable-setuid-sandbox', '--no-sandbox']
+    });
+  } catch (error) {
+    console.error('Error launching browser:', error);
+    throw new Error(`Failed to launch browser: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
 
 interface ScrapingResult {
   termsOfService: string | null;
@@ -57,62 +107,39 @@ interface OpenAIResponse {
 /**
  * Call OpenAI API with retry logic and exponential backoff for rate limiting
  */
-async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-4-turbo', maxTokens = 4096, retries = 4): Promise<OpenAIResponse> {
+async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-3.5-turbo', maxTokens = 4096, retries = 2): Promise<OpenAIResponse> {
   let retryCount = 0;
   let lastError: unknown;
+  
+  // Always use gpt-3.5-turbo for faster performance when scraping
+  const useModel = 'gpt-3.5-turbo';
   
   while (retryCount <= retries) {
     try {
       if (retryCount > 0) {
-        // If this is a retry, wait with exponential backoff
-        let backoffTime = Math.pow(2, retryCount) * 1000;
-        
-        // For token rate limits, use a longer base waiting time
-        if (lastError && typeof lastError === 'object' && 'response' in lastError && 
-            lastError.response && 
-            (lastError.response as any).data?.error?.type === 'tokens') {
-          // Extract the suggested wait time if available
-          const errorMessage = (lastError.response as any).data?.error?.message || '';
-          const waitTimeMatch = errorMessage.match(/Please try again in (\d+\.?\d*)s/);
-          
-          if (waitTimeMatch && waitTimeMatch[1]) {
-            // Use the suggested wait time from the API + 5 seconds buffer
-            const suggestedWait = parseFloat(waitTimeMatch[1]) * 1000 + 5000;
-            backoffTime = Math.max(backoffTime, suggestedWait);
-            console.log(`Token limit exceeded, API suggests waiting ${waitTimeMatch[1]}s. Waiting ${backoffTime/1000}s...`);
-          } else {
-            // Default longer wait for token limits
-            backoffTime = Math.max(backoffTime, 30000); // At least 30 seconds for token limits
-            console.log(`Token limit exceeded, waiting ${backoffTime/1000} seconds...`);
-          }
-        } else {
-          console.log(`Rate limit hit, retrying in ${backoffTime/1000} seconds (attempt ${retryCount} of ${retries})...`);
-        }
-        
+        // If this is a retry, use a shorter backoff to avoid long waits
+        let backoffTime = Math.min(Math.pow(2, retryCount) * 1000, 4000);
+        console.log(`Retrying in ${backoffTime/1000} seconds (attempt ${retryCount} of ${retries})...`);
         await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
       
-      // Reduce model complexity if we're hitting rate limits repeatedly
-      let requestModel = model;
-      if (retryCount >= 3 && model.includes('gpt-4')) {
-        // Switch to GPT-3.5 after multiple retries to reduce token usage
-        requestModel = 'gpt-3.5-turbo';
-        console.log('Switching to gpt-3.5-turbo model after multiple rate limit errors');
-      }
-      
+      // Optimize model settings for faster response
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
-          model: requestModel,
+          model: useModel,
           messages,
           temperature: 0.1,
-          max_tokens: maxTokens
+          max_tokens: maxTokens,
+          presence_penalty: 0,
+          frequency_penalty: 0
         },
         {
           headers: {
             'Authorization': `Bearer ${OPENAI_API_KEY}`,
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 30000 // 30 seconds timeout for API calls
         }
       );
       
@@ -126,25 +153,13 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
           ((error.response as any).status === 429 || 
            (error.response as any)?.data?.error?.code === 'rate_limit_exceeded')) {
         
-        // This is a rate limit error, retry with backoff
         retryCount++;
         
-        // If we're at the last retry, we'll exit the loop and throw the error
         if (retryCount > retries) {
           console.error(`Rate limit error persisted after ${retries} retries. Giving up.`);
           break;
         }
         
-        // Extract retry-after header if present
-        const retryAfter = (error.response as any).headers && (error.response as any).headers['retry-after'];
-        if (retryAfter) {
-          const waitTime = parseInt(retryAfter, 10) * 1000;
-          console.log(`Rate limit hit, API suggests waiting ${waitTime/1000} seconds. Waiting...`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
-          continue;
-        }
-        
-        // Otherwise continue to the next iteration (which will apply exponential backoff)
         continue;
       } else {
         // For any other type of error, throw immediately
@@ -163,23 +178,13 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
 export const scrapeWebsite = async (url: string): Promise<ScrapingResult> => {
   let browser;
   try {
-    browser = await chromium.launch({ headless: true });
+    browser = await launchBrowser();
   } catch (error: unknown) {
-    console.error('Error launching browser:', error);
-    // Try to install Playwright browsers automatically
-    try {
-      console.log('Attempting to install Playwright browsers...');
-      await execAsync('npx playwright install chromium');
-      console.log('Playwright browsers installed successfully, retrying...');
-      browser = await chromium.launch({ headless: true });
-    } catch (installError) {
-      console.error('Error installing Playwright browsers:', installError);
-      throw new Error(`
-Failed to launch browser for scraping. Playwright browsers may not be installed.
-Please run the following command manually and try again:
-npx playwright install
+    console.error('Error during browser launch:', error);
+    throw new Error(`
+Failed to launch browser for scraping. Please try again or run:
+npx playwright install chromium --with-deps
 Error details: ${(error as Error).message || String(error)}`);
-    }
   }
   
   try {
@@ -229,35 +234,51 @@ Error details: ${(error as Error).message || String(error)}`);
     let privacyPolicy = null;
     let cookiePolicy = null;
     
-    // Add some delay between API calls to avoid rate limits
+    // Process documents in parallel for faster analysis
+    const scrapePromises = [];
+    
     if (termsLink) {
-      termsOfService = await scrapePageWithOpenAI(termsLink.href, context, 'terms of service');
-      // Add a delay between API calls
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      scrapePromises.push(
+        scrapePageWithOpenAI(termsLink.href, context, 'terms of service')
+          .then(result => { termsOfService = result; })
+      );
     }
     
     // Handle privacy and cookie policies, which might be combined
     if (privacyLink && cookieLink && privacyLink.href === cookieLink.href) {
       // Same URL for both - extract both from same page
       console.log('Privacy and cookie policies appear to be on the same page');
-      const combinedContent = await scrapePageForMultiplePolicies(privacyLink.href, context);
-      privacyPolicy = combinedContent.privacyPolicy;
-      cookiePolicy = combinedContent.cookiePolicy;
+      scrapePromises.push(
+        scrapePageForMultiplePolicies(privacyLink.href, context)
+          .then(results => {
+            privacyPolicy = results.privacyPolicy;
+            cookiePolicy = results.cookiePolicy;
+          })
+      );
     } else {
       // Different URLs or only one exists
       if (privacyLink) {
-        privacyPolicy = await scrapePageWithOpenAI(privacyLink.href, context, 'privacy policy');
-        // Add a delay between API calls
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        scrapePromises.push(
+          scrapePageWithOpenAI(privacyLink.href, context, 'privacy policy')
+            .then(result => { privacyPolicy = result; })
+        );
       }
       
       if (cookieLink) {
-        cookiePolicy = await scrapePageWithOpenAI(cookieLink.href, context, 'cookie policy');
-      } else if (privacyLink && privacyPolicy) {
-        // If no dedicated cookie policy link is found, try to extract cookie-related content from privacy policy
-        console.log('No dedicated cookie policy found, searching in privacy policy...');
-        cookiePolicy = await extractCookiePolicyFromPrivacyPolicy(privacyPolicy);
+        scrapePromises.push(
+          scrapePageWithOpenAI(cookieLink.href, context, 'cookie policy')
+            .then(result => { cookiePolicy = result; })
+        );
       }
+    }
+    
+    // Wait for all scraping tasks to complete
+    await Promise.all(scrapePromises);
+    
+    // If no dedicated cookie policy link is found, try to extract cookie-related content from privacy policy
+    if (!cookiePolicy && privacyPolicy) {
+      console.log('No dedicated cookie policy found, searching in privacy policy...');
+      cookiePolicy = await extractCookiePolicyFromPrivacyPolicy(privacyPolicy);
     }
     
     return {
@@ -455,27 +476,21 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
 
     const page = await context.newPage();
     
-    // Add improved handling for privacy management platforms
-    const isPriaseePage = url.includes('privasee.io');
-    const isPrivacyPortal = url.includes('privacy') || url.includes('cookie') || url.includes('terms');
-    
-    // For privacy management platforms, we need a longer timeout and wait for network idle
+    // More aggressive timeouts and only wait for basic page load
     const navigationOptions = {
-      waitUntil: isPriaseePage || isPrivacyPortal ? 'networkidle' : 'domcontentloaded',
-      timeout: isPriaseePage || isPrivacyPortal ? 60000 : 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 15000 // Reduced timeout (15 seconds max)
     };
     
+    // Skip waiting for network idle which is very slow
     await page.goto(url, navigationOptions);
     
-    // For privacy portals, wait extra time for dynamic content to load
-    if (isPriaseePage || isPrivacyPortal) {
-      // Wait a bit longer for dynamic content
-      await page.waitForTimeout(2000);
-      
+    // Faster handling of cookie popups - only wait max 1 second
+    try {
       // Try to click "Accept all" or similar buttons if they exist (for cookie popups)
-      try {
-        await page.evaluate(() => {
-          const acceptButtons = Array.from(document.querySelectorAll('button'))
+      await Promise.race([
+        page.evaluate(() => {
+          const acceptButtons = Array.from(document.querySelectorAll('button, a'))
             .filter(button => {
               const text = button.textContent?.toLowerCase() || '';
               return text.includes('accept') || text.includes('agree') || text.includes('continue');
@@ -483,12 +498,11 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
           if (acceptButtons.length > 0) {
             (acceptButtons[0] as HTMLElement).click();
           }
-        });
-        // Wait a bit more after clicking
-        await page.waitForTimeout(1000);
-      } catch (error) {
-        console.log('No accept buttons found or error clicking:', error);
-      }
+        }),
+        new Promise(resolve => setTimeout(resolve, 1000)) // 1 second timeout max
+      ]);
+    } catch (error) {
+      // Ignore errors - we won't let cookie popups slow us down
     }
     
     // Get just the text content to reduce token usage
@@ -576,7 +590,7 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
     
     // Special handling for privasee.io which uses a specific structure
     let enrichedPrompt = '';
-    if (isPriaseePage) {
+    if (url.includes('privasee.io')) {
       enrichedPrompt = `This is text from a page on Privasee.io, which is a privacy compliance platform. 
 Look carefully for any content related to ${documentType}.
 `;
@@ -640,25 +654,18 @@ const scrapePageForMultiplePolicies = async (url: string, context: any): Promise
   const page = await context.newPage();
   
   try {
-    // Add improved handling for privacy management platforms
-    const isPriaseePage = url.includes('privasee.io');
-    const isPrivacyPortal = url.includes('privacy') || url.includes('cookie') || url.includes('terms');
-    
-    // For privacy management platforms, we need a longer timeout and wait for network idle
+    // Use faster navigation options
     const navigationOptions = {
-      waitUntil: isPriaseePage || isPrivacyPortal ? 'networkidle' : 'domcontentloaded',
-      timeout: isPriaseePage || isPrivacyPortal ? 60000 : 30000
+      waitUntil: 'domcontentloaded',
+      timeout: 15000
     };
     
     await page.goto(url, navigationOptions);
     
-    // For privacy portals, wait extra time for dynamic content to load
-    if (isPriaseePage || isPrivacyPortal) {
-      await page.waitForTimeout(5000); // Longer wait time for dynamic content
-      
-      // Click any "Accept" buttons
-      try {
-        await page.evaluate(() => {
+    // Handle cookie popups quickly without excessive waiting
+    try {
+      await Promise.race([
+        page.evaluate(() => {
           const acceptButtons = Array.from(document.querySelectorAll('button, a'))
             .filter(button => {
               const text = button.textContent?.toLowerCase() || '';
@@ -668,11 +675,11 @@ const scrapePageForMultiplePolicies = async (url: string, context: any): Promise
           if (acceptButtons.length > 0) {
             (acceptButtons[0] as HTMLElement).click();
           }
-        });
-        await page.waitForTimeout(2000);
-      } catch (error) {
-        console.log('No accept buttons found or error clicking:', error);
-      }
+        }),
+        new Promise(resolve => setTimeout(resolve, 1000)) // 1 second timeout max
+      ]);
+    } catch (error) {
+      // Ignore errors from cookie handling
     }
     
     // Get just the text content instead of HTML to reduce token usage
