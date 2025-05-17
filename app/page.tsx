@@ -34,49 +34,85 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8">
-      <div className="text-center max-w-2xl">
-        <h1 className="text-4xl font-bold mb-4">EU Compliance Checker</h1>
-        <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-          Analyze your website's compliance with European laws including GDPR, e-Privacy, and more.
-        </p>
-      </div>
-
-      <div className="w-full max-w-xl bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Website URL
-            </label>
-            <div className="mt-1 relative rounded-md shadow-sm">
-              <input
-                type="text"
-                id="url"
-                className={`block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm focus:ring-primary focus:border-primary`}
-                placeholder="https://example.com"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
+    <>
+      <div className="background-gradient" />
+      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8 relative z-10">
+        {/* Frame en haut à gauche du titre */}
+        <img
+          src="/Frame.svg"
+          alt="Frame décoratif"
+          className="absolute left-50 -bg-conic-60 -rotate-15 top-20 w-12 h-12 md:w-16 md:h-16  -translate-x-4 -translate-y-4 z-20"
+          style={{ pointerEvents: 'none' }}
+        />
+        <div className="text-center max-w-2xl">
+          <h1 className="text-4xl font-extrabold mb-4">EU Compliance Checker </h1>
+          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+            Analyze your website's compliance with European laws including GDPR, e-Privacy, and more.
+          </p>
+        </div>
+        <div className="relative w-full flex items-center justify-center">
+          {/* Rectangle du formulaire */}
+          <div className="relative w-full max-w-xl z-20">
+            <div className="w-full h-full absolute inset-0 bg-gray-900 rounded-xl translate-y-2 translate-x-2"></div>
+            <div className="rounded-xl relative z-20 pl-8 sm:pl-10 pr-8 sm:pr-16 py-8 border-[3px] border-gray-900 bg-blue-200">
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Website URL
+                  </label>
+                  <div className="mt-1 relative flex gap-0">
+                    {/* Champ avec effet décalé */}
+                    <div className="relative w-full h-full">
+                      <div className="w-full h-full rounded bg-gray-900 translate-y-1 translate-x-1 absolute inset-0 z-10"></div>
+                      <input
+                        type="text"
+                        id="url"
+                        className={`border-[3px] w-full relative z-20 border-gray-900 placeholder-gray-600 text-lg font-medium focus:outline-none py-3.5 px-6 rounded bg-white ${error ? 'border-red-300' : ''}`}
+                        placeholder="https://example.com"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                      />
+                    </div>
+                    {/* Bouton avec effet décalé */}
+                    <div className="relative w-auto flex-shrink-0 h-full group ml-3">
+                      <div className="w-full h-full rounded bg-gray-800 translate-y-1 translate-x-1 absolute inset-0 z-10"></div>
+                      <button
+                        type="submit"
+                        className="py-3.5 rounded px-6 group-hover:-translate-y-px group-hover:-translate-x-px ease-out duration-300 z-20 relative w-full border-[3px] border-gray-900 bg-blue-500 tracking-wide text-lg flex-shrink-0 text-white font-bold cursor-pointer"
+                      >
+                        Analyze Compliance
+                      </button>
+                    </div>
+                  </div>
+                  {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+                </div>
+              </form>
+              {/* Frame en bas à droite du rectangle */}
+              <img
+                src="/Frame.svg"
+                alt="Frame décoratif"
+                className="absolute -right-40 rotate-15 -top-25 w-12 h-12 md:w-16 md:h-16 translate-x-4 translate-y-4 z-10"
+                style={{ pointerEvents: 'none' }}
               />
             </div>
-            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           </div>
-          <button
-            type="submit"
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-white bg-primary hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-          >
-            Analyze Compliance
-          </button>
-        </form>
-      </div>
-
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-          Our tool checks websites against GDPR, e-Privacy, and other EU regulations
-        </p>
-        <div className="text-xs px-4 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-md inline-block">
-          <span className="font-semibold">Demo Mode:</span> This application uses simulated data for demonstration purposes
         </div>
       </div>
-    </div>
+      {/* Footer */}
+      <footer className="w-full flex items-center justify-center gap-2 py-6 text-text-base font-medium">
+        <span>Made with <span className="text-pink-500">💖</span> by Alphavibe</span>
+        <a
+          href="https://github.com/imbjdd/alphavibe-compliance"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-2 hover:scale-110 transition-transform"
+          title="Voir le repo open source sur GitHub"
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.58 2 12.26C2 16.62 4.87 20.26 8.84 21.5C9.34 21.59 9.52 21.32 9.52 21.09C9.52 20.88 9.51 20.3 9.51 19.63C7 20.13 6.48 18.36 6.48 18.36C6.04 17.23 5.37 16.94 5.37 16.94C4.39 16.28 5.45 16.3 5.45 16.3C6.54 16.39 7.09 17.53 7.09 17.53C8.06 19.23 9.68 18.77 10.28 18.54C10.37 17.8 10.66 17.3 10.99 17.03C8.8 16.76 6.5 15.93 6.5 12.77C6.5 11.81 6.84 11.04 7.4 10.43C7.31 10.16 7.01 9.13 7.48 7.77C7.48 7.77 8.2 7.48 9.5 8.38C10.18 8.19 10.92 8.09 11.66 8.09C12.4 8.09 13.14 8.19 13.82 8.38C15.12 7.48 15.84 7.77 15.84 7.77C16.31 9.13 16.01 10.16 15.92 10.43C16.48 11.04 16.82 11.81 16.82 12.77C16.82 15.94 14.51 16.76 12.32 17.03C12.74 17.37 13.11 18.04 13.11 19.03C13.11 20.41 13.1 21.54 13.1 21.09C13.1 21.32 13.28 21.6 13.78 21.5C17.75 20.26 20.62 16.62 20.62 12.26C20.62 6.58 16.14 2 12 2Z" fill="#181717"/>
+          </svg>
+        </a>
+      </footer>
+    </>
   );
 } 
