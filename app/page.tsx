@@ -36,49 +36,59 @@ export default function Home() {
   return (
     <>
       <div className="background-gradient" />
-      <div className="flex flex-col items-center justify-center min-h-[80vh] gap-8 relative z-10">
-        {/* Frame en haut à gauche du titre */}
-        <img
-          src="/Frame.svg"
-          alt="Frame décoratif"
-          className="absolute left-50 -bg-conic-60 -rotate-15 top-20 w-12 h-12 md:w-16 md:h-16  -translate-x-4 -translate-y-4 z-20"
-          style={{ pointerEvents: 'none' }}
-        />
-        <div className="text-center max-w-2xl">
-          <h1 className="text-4xl font-extrabold mb-4">EU Compliance Checker </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-8 md:py-12 lg:py-16 gap-6 md:gap-8 lg:gap-10 relative z-10 container mx-auto">
+        <div className="text-center max-w-2xl md:max-w-3xl lg:max-w-4xl relative">
+          {/* Étoile à gauche du titre */}
+          <img
+            src="/Frame.svg"
+            alt="Frame décoratif"
+            className="hidden md:block absolute -left-14 sm:-left-16 md:-left-20 lg:-left-24 top-1/2 -translate-y-4/3 -rotate-15 w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 z-20"
+            style={{ pointerEvents: 'none' }}
+          />
+          
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 lg:mb-6">EU Compliance Checker</h1>
+          
+          {/* Étoile à droite du titre */}
+          <img
+            src="/Frame.svg"
+            alt="Frame décoratif"
+            className="hidden md:block absolute -right-14 sm:-right-16 md:-right-20 lg:-right-24 top-1/2 translate-y-1/3 rotate-15 w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 z-20"
+            style={{ pointerEvents: 'none' }}
+          />
+          
+          <p className="text-lg md:text-xl lg:text-2xl text-gray-600 dark:text-gray-300 mb-6 md:mb-8 lg:mb-10 max-w-prose mx-auto">
             Analyze your website's compliance with European laws including GDPR, e-Privacy, and more.
           </p>
         </div>
-        <div className="relative w-full flex items-center justify-center">
+        <div className="relative w-full flex items-center justify-center px-4 sm:px-6 md:px-8">
           {/* Rectangle du formulaire */}
-          <div className="relative w-full max-w-xl z-20">
+          <div className="relative w-full max-w-xl md:max-w-2xl lg:max-w-3xl z-20">
             <div className="w-full h-full absolute inset-0 bg-gray-900 rounded-xl translate-y-2 translate-x-2"></div>
-            <div className="rounded-xl relative z-20 pl-8 sm:pl-10 pr-8 sm:pr-16 py-8 border-[3px] border-gray-900 bg-blue-200">
+            <div className="rounded-xl relative z-20 pl-6 sm:pl-8 md:pl-10 pr-6 sm:pr-8 md:pr-16 py-6 md:py-8 border-[3px] border-gray-900 bg-blue-200">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="url" className="block text-sm md:text-base font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Website URL
                   </label>
-                  <div className="mt-1 relative flex gap-0">
+                  <div className="mt-1 relative flex flex-col sm:flex-row gap-3 sm:gap-0">
                     {/* Champ avec effet décalé */}
                     <div className="relative w-full h-full">
                       <div className="w-full h-full rounded bg-gray-900 translate-y-1 translate-x-1 absolute inset-0 z-10"></div>
                       <input
                         type="text"
                         id="url"
-                        className={`border-[3px] w-full relative z-20 border-gray-900 placeholder-gray-600 text-lg font-medium focus:outline-none py-3.5 px-6 rounded bg-white ${error ? 'border-red-300' : ''}`}
+                        className={`border-[3px] w-full relative z-20 border-gray-900 placeholder-gray-600 text-base md:text-lg font-medium focus:outline-none py-3 md:py-3.5 px-4 md:px-6 rounded bg-white ${error ? 'border-red-300' : ''}`}
                         placeholder="https://example.com"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                       />
                     </div>
                     {/* Bouton avec effet décalé */}
-                    <div className="relative w-auto flex-shrink-0 h-full group ml-3">
+                    <div className="relative w-full sm:w-auto flex-shrink-0 h-full group sm:ml-3">
                       <div className="w-full h-full rounded bg-gray-800 translate-y-1 translate-x-1 absolute inset-0 z-10"></div>
                       <button
                         type="submit"
-                        className="py-3.5 rounded px-6 group-hover:-translate-y-px group-hover:-translate-x-px ease-out duration-300 z-20 relative w-full border-[3px] border-gray-900 bg-blue-500 tracking-wide text-lg flex-shrink-0 text-white font-bold cursor-pointer"
+                        className="py-3 md:py-3.5 rounded px-4 md:px-6 group-hover:-translate-y-px group-hover:-translate-x-px ease-out duration-300 z-20 relative w-full border-[3px] border-gray-900 bg-blue-500 tracking-wide text-base md:text-lg flex-shrink-0 text-white font-bold cursor-pointer"
                       >
                         Analyze Compliance
                       </button>
@@ -87,19 +97,12 @@ export default function Home() {
                   {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
                 </div>
               </form>
-              {/* Frame en bas à droite du rectangle */}
-              <img
-                src="/Frame.svg"
-                alt="Frame décoratif"
-                className="absolute -right-40 rotate-15 -top-25 w-12 h-12 md:w-16 md:h-16 translate-x-4 translate-y-4 z-10"
-                style={{ pointerEvents: 'none' }}
-              />
             </div>
           </div>
         </div>
       </div>
       {/* Footer */}
-      <footer className="w-full flex items-center justify-center gap-2 py-6 text-text-base font-medium">
+      <footer className="w-full flex items-center justify-center gap-2 py-6 md:py-8 text-text-base font-medium">
         <span>Made with <span className="text-pink-500">💖</span> by Alphavibe</span>
         <a
           href="https://github.com/imbjdd/alphavibe-compliance"
