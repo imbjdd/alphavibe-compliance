@@ -1,0 +1,129 @@
+{
+  "gdpr": [
+    {
+      "id": "gdpr-1",
+      "name": "Data Collection Notice",
+      "description": "Website must clearly inform users about data collection",
+      "criteria": [
+        "Clearly states what personal data is collected",
+        "Explains the purpose of data collection",
+        "Specifies the legal basis for processing"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "gdpr-2",
+      "name": "User Consent",
+      "description": "Website must obtain clear consent for data processing",
+      "criteria": [
+        "Consent is explicit and affirmative",
+        "Consent is freely given",
+        "Consent can be withdrawn"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "gdpr-3",
+      "name": "Right to Access",
+      "description": "Users must be able to access their personal data",
+      "criteria": [
+        "Explains how users can access their data",
+        "Specifies timeframe for providing access",
+        "No unreasonable limitations on access"
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "gdpr-4",
+      "name": "Right to Erasure",
+      "description": "Users must be able to request deletion of their data",
+      "criteria": [
+        "Explains how users can request deletion",
+        "Specifies conditions under which deletion requests may be denied",
+        "Explains data retention periods"
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "gdpr-5",
+      "name": "Data Portability",
+      "description": "Users must be able to receive and transfer their data",
+      "criteria": [
+        "Explains how users can export their data",
+        "Provides information on data format",
+        "Specifies any limitations on portability"
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "gdpr-6",
+      "name": "Data Breach Notification",
+      "description": "Website must notify users of data breaches",
+      "criteria": [
+        "Explains breach notification process",
+        "Specifies timeframe for notification",
+        "Indicates what information will be provided"
+      ],
+      "severity": "medium"
+    }
+  ],
+  "eprivacy": [
+    {
+      "id": "eprivacy-1",
+      "name": "Cookie Notice",
+      "description": "Website must clearly inform users about cookies",
+      "criteria": [
+        "Visible cookie notice on first visit",
+        "Explains what cookies are used",
+        "Explains the purpose of each cookie"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "eprivacy-2",
+      "name": "Cookie Consent",
+      "description": "Website must obtain consent for non-essential cookies",
+      "criteria": [
+        "Consent for cookies is obtained before non-essential cookies are placed",
+        "Consent is affirmative (not pre-checked boxes)",
+        "Users can decline non-essential cookies"
+      ],
+      "severity": "high"
+    },
+    {
+      "id": "eprivacy-3",
+      "name": "Cookie Settings",
+      "description": "Website must allow users to change cookie preferences",
+      "criteria": [
+        "Ability to change cookie settings after initial choice",
+        "Clear explanation of how to change cookie settings",
+        "Cookie settings are easy to access"
+      ],
+      "severity": "medium"
+    },
+    {
+      "id": "eprivacy-4",
+      "name": "Cookie Duration",
+      "description": "Website must inform about cookie duration",
+      "criteria": [
+        "Explains how long cookies remain active",
+        "Differentiates between session and persistent cookies",
+        "Explains how users can delete cookies"
+      ],
+      "severity": "low"
+    }
+  ],
+  "accessibility": [
+    {
+      "id": "access-1",
+      "name": "Web Accessibility",
+      "description": "Website should be accessible to users with disabilities",
+      "criteria": [
+        "Mentions commitment to accessibility",
+        "References WCAG standards",
+        "Provides contact information for accessibility issues"
+      ],
+      "severity": "medium"
+    }
+  ]
+} 
