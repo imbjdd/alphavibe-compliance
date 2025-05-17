@@ -59,7 +59,7 @@ interface OpenAIResponse {
  */
 async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-4-turbo', maxTokens = 4096, retries = 4): Promise<OpenAIResponse> {
   let retryCount = 0;
-  let lastError: any;
+  let lastError: unknown;
   
   while (retryCount <= retries) {
     try {
@@ -68,9 +68,11 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
         let backoffTime = Math.pow(2, retryCount) * 1000;
         
         // For token rate limits, use a longer base waiting time
-        if (lastError?.response?.data?.error?.type === 'tokens') {
+        if (lastError && typeof lastError === 'object' && 'response' in lastError && 
+            lastError.response && 
+            (lastError.response as any).data?.error?.type === 'tokens') {
           // Extract the suggested wait time if available
-          const errorMessage = lastError?.response?.data?.error?.message || '';
+          const errorMessage = (lastError.response as any).data?.error?.message || '';
           const waitTimeMatch = errorMessage.match(/Please try again in (\d+\.?\d*)s/);
           
           if (waitTimeMatch && waitTimeMatch[1]) {
@@ -115,13 +117,14 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
       );
       
       return response.data as OpenAIResponse;
-    } catch (error) {
+    } catch (error: unknown) {
       lastError = error;
       
       // Handle token-specific rate limits
-      if (error.response && 
-          (error.response.status === 429 || 
-           error.response?.data?.error?.code === 'rate_limit_exceeded')) {
+      if (error && typeof error === 'object' && 'response' in error && 
+          error.response && 
+          ((error.response as any).status === 429 || 
+           (error.response as any)?.data?.error?.code === 'rate_limit_exceeded')) {
         
         // This is a rate limit error, retry with backoff
         retryCount++;
@@ -133,7 +136,7 @@ async function callOpenAIWithRetry(messages: {role: string, content: string}[], 
         }
         
         // Extract retry-after header if present
-        const retryAfter = error.response.headers && error.response.headers['retry-after'];
+        const retryAfter = (error.response as any).headers && (error.response as any).headers['retry-after'];
         if (retryAfter) {
           const waitTime = parseInt(retryAfter, 10) * 1000;
           console.log(`Rate limit hit, API suggests waiting ${waitTime/1000} seconds. Waiting...`);
@@ -161,7 +164,7 @@ export const scrapeWebsite = async (url: string): Promise<ScrapingResult> => {
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error launching browser:', error);
     // Try to install Playwright browsers automatically
     try {
@@ -175,7 +178,7 @@ export const scrapeWebsite = async (url: string): Promise<ScrapingResult> => {
 Failed to launch browser for scraping. Playwright browsers may not be installed.
 Please run the following command manually and try again:
 npx playwright install
-Error details: ${error.message}`);
+Error details: ${(error as Error).message || String(error)}`);
     }
   }
   
@@ -262,9 +265,9 @@ Error details: ${error.message}`);
       privacyPolicy,
       cookiePolicy
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error during scraping:', error);
-    throw new Error(`Failed to scrape website ${url}: ${error.message}`);
+    throw new Error(`Failed to scrape website ${url}: ${error instanceof Error ? error.message : String(error)}`);
   } finally {
     await browser?.close().catch(err => console.error('Error closing browser:', err));
   }
@@ -273,7 +276,7 @@ Error details: ${error.message}`);
 /**
  * Find compliance links on the main page
  */
-const findComplianceLinks = async (page): Promise<ComplianceLinks> => {
+const findComplianceLinks = async (page: any): Promise<ComplianceLinks> => {
   const links = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('a')).map(a => ({
       text: a.textContent?.trim().toLowerCase() || '',
@@ -284,7 +287,7 @@ const findComplianceLinks = async (page): Promise<ComplianceLinks> => {
   });
   
   // English and French terms for compliance documents
-  const termsLink = links.find(link => 
+  const termsLink = links.find((link: Link) => 
     link.text.includes('terms') || 
     link.text.includes('conditions') || 
     link.text.includes('tos') ||
@@ -298,7 +301,7 @@ const findComplianceLinks = async (page): Promise<ComplianceLinks> => {
     link.href.includes('legal')
   ) || null;
   
-  const privacyLink = links.find(link => 
+  const privacyLink = links.find((link: Link) => 
     link.text.includes('privacy') || 
     link.text.includes('vie privée') ||
     link.text.includes('données personnelles') ||
@@ -309,7 +312,7 @@ const findComplianceLinks = async (page): Promise<ComplianceLinks> => {
     link.href.includes('rgpd')
   ) || null;
   
-  const cookieLink = links.find(link => 
+  const cookieLink = links.find((link: Link) => 
     link.text.includes('cookie') || 
     link.text.includes('cookies') || 
     link.href.includes('cookie') ||
@@ -322,7 +325,7 @@ const findComplianceLinks = async (page): Promise<ComplianceLinks> => {
 /**
  * Find and check links in the footer which often contains compliance documents
  */
-const findFooterLinks = async (page): Promise<ComplianceLinks> => {
+const findFooterLinks = async (page: any): Promise<ComplianceLinks> => {
   const footerLinks = await page.evaluate(() => {
     // Try to find the footer element with different strategies
     const footer = document.querySelector('footer') || 
@@ -340,7 +343,7 @@ const findFooterLinks = async (page): Promise<ComplianceLinks> => {
     }));
   });
   
-  const termsLink = footerLinks.find(link => 
+  const termsLink = footerLinks.find((link: Link) => 
     link.text.includes('terms') || 
     link.text.includes('conditions') || 
     link.text.includes('mentions légales') ||
@@ -349,7 +352,7 @@ const findFooterLinks = async (page): Promise<ComplianceLinks> => {
     link.href.includes('mentions')
   ) || null;
   
-  const privacyLink = footerLinks.find(link => 
+  const privacyLink = footerLinks.find((link: Link) => 
     link.text.includes('privacy') || 
     link.text.includes('confidentialité') ||
     link.text.includes('données') ||
@@ -357,7 +360,7 @@ const findFooterLinks = async (page): Promise<ComplianceLinks> => {
     link.href.includes('donnees')
   ) || null;
   
-  const cookieLink = footerLinks.find(link => 
+  const cookieLink = footerLinks.find((link: Link) => 
     link.text.includes('cookie') || 
     link.href.includes('cookie')
   ) || null;
@@ -368,7 +371,7 @@ const findFooterLinks = async (page): Promise<ComplianceLinks> => {
 /**
  * Check common sections like About or Legal pages that might contain or link to compliance docs
  */
-const findMenuLinks = async (page): Promise<ComplianceLinks> => {
+const findMenuLinks = async (page: any): Promise<ComplianceLinks> => {
   // First, try to find "About", "Legal", or similar pages
   const menuLinks = await page.evaluate(() => {
     return Array.from(document.querySelectorAll('a')).filter(a => {
@@ -405,7 +408,7 @@ const findMenuLinks = async (page): Promise<ComplianceLinks> => {
       });
       
       if (!termsLink) {
-        termsLink = subPageLinks.find(link => 
+        termsLink = subPageLinks.find((link: Link) => 
           link.text.includes('terms') || 
           link.text.includes('conditions') || 
           link.text.includes('mentions légales') ||
@@ -414,7 +417,7 @@ const findMenuLinks = async (page): Promise<ComplianceLinks> => {
       }
       
       if (!privacyLink) {
-        privacyLink = subPageLinks.find(link => 
+        privacyLink = subPageLinks.find((link: Link) => 
           link.text.includes('privacy') || 
           link.text.includes('confidentialité') ||
           link.href.includes('rgpd')
@@ -422,7 +425,7 @@ const findMenuLinks = async (page): Promise<ComplianceLinks> => {
       }
       
       if (!cookieLink) {
-        cookieLink = subPageLinks.find(link => 
+        cookieLink = subPageLinks.find((link: Link) => 
           link.text.includes('cookie') || 
           link.href.includes('cookie')
         ) || null;
@@ -513,27 +516,26 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
       let policyContainer = null;
       for (const selector of possiblePolicyContainers) {
         const container = document.querySelector(selector);
-        if (container && container.textContent.trim().length > 200) {
+        if (container && container.textContent && container.textContent.trim().length > 200) {
           policyContainer = container;
           break;
         }
       }
       
       // Extract clean text
-      function extractCleanText(element) {
+      function extractCleanText(element: HTMLElement) {
         // Get all text nodes
         const textNodes = [];
-        const walker = document.createTreeWalker(
-          element,
-          NodeFilter.SHOW_TEXT,
-          null
-        );
-        
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
         let node;
-        while(node = walker.nextNode()) {
-          const text = node.textContent.trim();
-          if (text && node.parentElement.tagName !== 'SCRIPT' && node.parentElement.tagName !== 'STYLE') {
-            textNodes.push(text);
+        while (node = walker.nextNode()) {
+          // Only keep non-empty text nodes
+          if ((node.textContent ?? '').trim()) {
+            // Check if the parent is not a script or style element
+            const parentNodeName = node.parentElement?.nodeName.toLowerCase() ?? '';
+            if (parentNodeName !== 'script' && parentNodeName !== 'style') {
+              textNodes.push(node);
+            }
           }
         }
         
@@ -543,11 +545,11 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
       
       // If we found a specific container, return just that content
       if (policyContainer) {
-        return extractCleanText(policyContainer);
+        return extractCleanText(policyContainer as HTMLElement);
       }
       
       // Otherwise, return the text from the body
-      return extractCleanText(document.body);
+      return extractCleanText(document.body as HTMLElement);
     });
     
     // Close the page as we don't need it anymore
@@ -619,14 +621,15 @@ ${truncatedContent}`;
     console.log(`\n========== END OPENAI RESPONSE ==========\n`);
     
     return extractedContent;
-  } catch (error) {
-    console.error(`Error scraping ${documentType} page ${url}:`, error);
+  } catch (error: unknown) {
+    console.error(`Error scraping ${documentType} from ${url}:`, error);
     
-    if (error.response && error.response.data) {
+    if (error && typeof error === 'object' && 'response' in error && 
+        error.response && typeof error.response === 'object' && 'data' in error.response) {
       console.error('OpenAI API error:', error.response.data);
     }
     
-    return `Failed to scrape ${documentType} content from ${url}: ${error.message}`;
+    return `Failed to scrape ${documentType} content from ${url}: ${error instanceof Error ? error.message : String(error)}`;
   }
 };
 
@@ -697,7 +700,7 @@ const scrapePageForMultiplePolicies = async (url: string, context: any): Promise
       let policyContainer = null;
       for (const selector of possiblePolicyContainers) {
         const container = document.querySelector(selector);
-        if (container && container.textContent.trim().length > 200) {
+        if (container && container.textContent && container.textContent.trim().length > 200) {
           policyContainer = container;
           break;
         }
@@ -706,27 +709,26 @@ const scrapePageForMultiplePolicies = async (url: string, context: any): Promise
       // If we found a specific container, return just the TEXT content
       if (policyContainer) {
         // Extract and clean text content to reduce tokens
-        return extractCleanText(policyContainer);
+        return extractCleanText(policyContainer as HTMLElement);
       }
       
       // 2. Otherwise, return the cleaned text content from the body
-      return extractCleanText(document.body);
+      return extractCleanText(document.body as HTMLElement);
       
       // Helper function to extract and clean text
-      function extractCleanText(element) {
+      function extractCleanText(element: HTMLElement) {
         // Get all text nodes
         const textNodes = [];
-        const walker = document.createTreeWalker(
-          element,
-          NodeFilter.SHOW_TEXT,
-          null
-        );
-        
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
         let node;
-        while(node = walker.nextNode()) {
-          const text = node.textContent.trim();
-          if (text && node.parentElement.tagName !== 'SCRIPT' && node.parentElement.tagName !== 'STYLE') {
-            textNodes.push(text);
+        while (node = walker.nextNode()) {
+          // Only keep non-empty text nodes
+          if ((node.textContent ?? '').trim()) {
+            // Check if the parent is not a script or style element
+            const parentNodeName = node.parentElement?.nodeName.toLowerCase() ?? '';
+            if (parentNodeName !== 'script' && parentNodeName !== 'style') {
+              textNodes.push(node);
+            }
           }
         }
         
@@ -874,16 +876,17 @@ ${shortPrivacy}`;
       privacyPolicy,
       cookiePolicy
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error(`Error scraping combined policies from ${url}:`, error);
     
-    if (error.response && error.response.data) {
+    if (error && typeof error === 'object' && 'response' in error && 
+        error.response && typeof error.response === 'object' && 'data' in error.response) {
       console.error('OpenAI API error:', error.response.data);
     }
     
     return {
-      privacyPolicy: `Failed to extract privacy policy from ${url}: ${error.message}`,
-      cookiePolicy: `Failed to extract cookie policy from ${url}: ${error.message}`
+      privacyPolicy: `Failed to extract privacy policy from ${url}: ${error instanceof Error ? error.message : String(error)}`,
+      cookiePolicy: `Failed to extract cookie policy from ${url}: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 };
@@ -933,13 +936,14 @@ ${truncatedPolicy}`;
     console.log(`\n========== END EXTRACTION ==========\n`);
     
     return extractedContent;
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error extracting cookie policy from privacy policy:', error);
     
-    if (error.response && error.response.data) {
+    if (error && typeof error === 'object' && 'response' in error && 
+        error.response && typeof error.response === 'object' && 'data' in error.response) {
       console.error('OpenAI API error:', error.response.data);
     }
     
-    return `Failed to extract cookie policy information: ${error.message}`;
+    return `Failed to extract cookie policy information: ${error instanceof Error ? error.message : String(error)}`;
   }
 }; 

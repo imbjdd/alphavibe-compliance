@@ -10,8 +10,8 @@ export const analyzeWebsite = async (url: string): Promise<AnalysisResult> => {
     // Call the API route instead of directly using Playwright
     const response = await axios.post('/api/analyze', { url });
     
-    // Return the analysis results
-    return response.data;
+    // Return the analysis results with type assertion
+    return response.data as AnalysisResult;
   } catch (error) {
     console.error('Error analyzing website:', error);
     throw new Error('Failed to analyze website');
