@@ -534,7 +534,7 @@ const scrapePageWithOpenAI = async (url: string, context: any, documentType: str
             // Check if the parent is not a script or style element
             const parentNodeName = node.parentElement?.nodeName.toLowerCase() ?? '';
             if (parentNodeName !== 'script' && parentNodeName !== 'style') {
-              textNodes.push(node);
+              textNodes.push(node.textContent);  // Store the text content, not the node
             }
           }
         }
@@ -727,7 +727,7 @@ const scrapePageForMultiplePolicies = async (url: string, context: any): Promise
             // Check if the parent is not a script or style element
             const parentNodeName = node.parentElement?.nodeName.toLowerCase() ?? '';
             if (parentNodeName !== 'script' && parentNodeName !== 'style') {
-              textNodes.push(node);
+              textNodes.push(node.textContent);  // Store the text content, not the node
             }
           }
         }
