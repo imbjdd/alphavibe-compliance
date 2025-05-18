@@ -6,12 +6,12 @@ import * as dotenv from 'dotenv';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import { homedir } from 'os';
+import { callOpenAIWithRetry, OpenAIResponse, isOpenAIConfigured } from './openaiService';
 
 // Load environment variables
 dotenv.config();
 
 const execAsync = promisify(exec);
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // Flag to track whether we've verified Playwright is installed
 let isPlaywrightVerified = false;
 
@@ -77,99 +77,6 @@ interface ComplianceLinks {
   termsLink: Link | null;
   privacyLink: Link | null;
   cookieLink: Link | null;
-}
-
-// OpenAI API response types
-interface OpenAIMessage {
-  role: string;
-  content: string;
-}
-
-interface OpenAIChoice {
-  message: OpenAIMessage;
-  index: number;
-  finish_reason: string;
-}
-
-interface OpenAIResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: OpenAIChoice[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-/**
- * Call OpenAI API with retry logic and exponential backoff for rate limiting
- */
-async function callOpenAIWithRetry(messages: {role: string, content: string}[], model = 'gpt-3.5-turbo', maxTokens = 4096, retries = 2): Promise<OpenAIResponse> {
-  let retryCount = 0;
-  let lastError: unknown;
-  
-  // Always use gpt-3.5-turbo for faster performance when scraping
-  const useModel = 'gpt-3.5-turbo';
-  
-  while (retryCount <= retries) {
-    try {
-      if (retryCount > 0) {
-        // If this is a retry, use a shorter backoff to avoid long waits
-        let backoffTime = Math.min(Math.pow(2, retryCount) * 1000, 4000);
-        console.log(`Retrying in ${backoffTime/1000} seconds (attempt ${retryCount} of ${retries})...`);
-        await new Promise(resolve => setTimeout(resolve, backoffTime));
-      }
-      
-      // Optimize model settings for faster response
-      const response = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model: useModel,
-          messages,
-          temperature: 0.1,
-          max_tokens: maxTokens,
-          presence_penalty: 0,
-          frequency_penalty: 0
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000 // 30 seconds timeout for API calls
-        }
-      );
-      
-      return response.data as OpenAIResponse;
-    } catch (error: unknown) {
-      lastError = error;
-      
-      // Handle token-specific rate limits
-      if (error && typeof error === 'object' && 'response' in error && 
-          error.response && 
-          ((error.response as any).status === 429 || 
-           (error.response as any)?.data?.error?.code === 'rate_limit_exceeded')) {
-        
-        retryCount++;
-        
-        if (retryCount > retries) {
-          console.error(`Rate limit error persisted after ${retries} retries. Giving up.`);
-          break;
-        }
-        
-        continue;
-      } else {
-        // For any other type of error, throw immediately
-        throw error;
-      }
-    }
-  }
-  
-  // If we got here, we've exhausted our retries
-  throw lastError;
 }
 
 /**
@@ -469,7 +376,7 @@ const findMenuLinks = async (page: any): Promise<ComplianceLinks> => {
  */
 const scrapePageWithOpenAI = async (url: string, context: any, documentType: string): Promise<string> => {
   try {
-    if (!OPENAI_API_KEY) {
+    if (!isOpenAIConfigured()) {
       console.error('OpenAI API key not found in environment variables');
       return `Failed to scrape ${documentType} content: OpenAI API key not found. Please add OPENAI_API_KEY to your .env file.`;
     }
@@ -906,7 +813,7 @@ const extractCookiePolicyFromPrivacyPolicy = async (privacyPolicyText: string | 
     return "No privacy policy was found from which to extract cookie information.";
   }
   
-  if (!OPENAI_API_KEY) {
+  if (!isOpenAIConfigured()) {
     console.error('OpenAI API key not found in environment variables');
     return 'Failed to extract cookie policy: OpenAI API key not found.';
   }
