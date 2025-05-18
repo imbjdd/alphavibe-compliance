@@ -42,6 +42,15 @@ yarn install
 
 ### Development
 
+Add this to .env file
+```
+ORQ_API_KEY=
+ORQ_CONTACT_ID=cus_1234567890
+ORQ_DEPLOYMENT_KEY=Deployment_Example
+ORQ_REQUEST_ID=request_id
+ORQ_CUSTOMER_ID=cus_1234567890
+```
+
 Run the development server:
 
 ```bash
