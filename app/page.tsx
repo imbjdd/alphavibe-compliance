@@ -46,7 +46,10 @@ export default function Home() {
             style={{ pointerEvents: 'none' }}
           />
           
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 lg:mb-6">EU Compliance Checker</h1>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold mb-4 lg:mb-6">
+            Test your <span className="text-blue-500 bg-blue-100 dark:bg-blue-900/30 px-2 z-50">compliance</span> 
+            in seconds, not <span className="text-blue-500 bg-blue-100 dark:bg-blue-900/30 px-2 z-0">minutes</span>
+          </h1>
           
           {/* Étoile à droite du titre */}
           <img
